@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forex Data</title>
+    <title>Forex Data with Support and Resistance</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -13,7 +13,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            background-color: #4CAF50; /* Green background for the table */
+            background-color: #4CAF50;
             color: white;
         }
         th, td {
@@ -22,27 +22,27 @@
             border: 1px solid #ddd;
         }
         th {
-            background-color: #3e8e41; /* Darker green for header */
+            background-color: #3e8e41;
         }
         .up {
-            color: #00FF00; /* Green for upward arrow */
+            color: #00FF00;
         }
         .down {
-            color: #FF0000; /* Red for downward arrow */
+            color: #FF0000;
         }
         .buy {
             font-weight: bold;
-            color: #00FF00; /* Green for Buy */
+            color: #00FF00;
         }
         .sell {
             font-weight: bold;
-            color: #FF0000; /* Red for Sell */
+            color: #FF0000;
         }
     </style>
 </head>
 <body>
 
-    <h1 style="text-align: center;">Forex Data</h1>
+    <h1 style="text-align: center;">Forex Data with Support and Resistance</h1>
     <table id="stockTable">
         <thead>
             <tr>
@@ -59,18 +59,14 @@
     </table>
 
     <script>
-        // Function to get query parameters from the URL
         function getQueryParam(param) {
             const urlParams = new URLSearchParams(window.location.search);
             return urlParams.get(param);
         }
 
-        // Extract 'from' symbol (f) and 'to' symbol (t) from the URL
-        const fromSymbol = getQueryParam('f') || 'EUR';  // Default to EUR if not specified
-        const toSymbol = getQueryParam('t') || 'USD';  // Default to USD if not specified
-        const apiKey = 'demo';  // You can replace this with a dynamic key or your own key
-
-        // Construct the API URL using the from_symbol and to_symbol
+        const fromSymbol = getQueryParam('f') || 'EUR';
+        const toSymbol = getQueryParam('t') || 'USD';
+        const apiKey = 'demo';
         const apiUrl = `https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=${fromSymbol}&to_symbol=${toSymbol}&interval=5min&apikey=${apiKey}`;
 
         function fetchForexData() {
@@ -91,43 +87,24 @@
                         });
 
                         const tableBody = document.getElementById('stockData');
-                        tableBody.innerHTML = ''; // Clear previous data
+                        tableBody.innerHTML = '';
 
                         forexData.forEach((forex, index) => {
                             let action = '';
-                            let openArrow = '';
-                            let highArrow = '';
-                            let lowArrow = '';
-                            let closeArrow = '';
-
                             if (index > 0) {
                                 const prevForex = forexData[index - 1];
+                                const { support, resistance } = findSupportResistance(forexData.slice(0, index));
 
-                                // Candlestick Pattern Recognition
-                                if (isBullishEngulfing(prevForex, forex)) {
-                                    action = 'Buy';
-                                } else if (isBearishEngulfing(prevForex, forex)) {
-                                    action = 'Sell';
-                                } else if (isHammer(forex)) {
-                                    action = 'Buy';
-                                } else if (isShootingStar(forex)) {
-                                    action = 'Sell';
-                                }
-
-                                // Determine Arrows
-                                openArrow = forex.open > prevForex.open ? '↑' : '↓';
-                                highArrow = forex.high > prevForex.high ? '↑' : '↓';
-                                lowArrow = forex.low > prevForex.low ? '↑' : '↓';
-                                closeArrow = forex.close > prevForex.close ? '↑' : '↓';
+                                action = enhancedSignalLogic(prevForex, forex, support, resistance);
                             }
 
                             const row = document.createElement('tr');
                             row.innerHTML = `
                                 <td>${forex.timestamp}</td>
-                                <td class="${openArrow === '↑' ? 'up' : 'down'}">${forex.open} ${openArrow}</td>
-                                <td class="${highArrow === '↑' ? 'up' : 'down'}">${forex.high} ${highArrow}</td>
-                                <td class="${lowArrow === '↑' ? 'up' : 'down'}">${forex.low} ${lowArrow}</td>
-                                <td class="${closeArrow === '↑' ? 'up' : 'down'}">${forex.close} ${closeArrow}</td>
+                                <td class="${forex.open > prevForex.open ? 'up' : 'down'}">${forex.open}</td>
+                                <td class="${forex.high > prevForex.high ? 'up' : 'down'}">${forex.high}</td>
+                                <td class="${forex.low > prevForex.low ? 'up' : 'down'}">${forex.low}</td>
+                                <td class="${forex.close > prevForex.close ? 'up' : 'down'}">${forex.close}</td>
                                 <td>${forex.volume}</td>
                                 <td class="${action === 'Buy' ? 'buy' : 'sell'}">${action}</td>
                             `;
@@ -143,26 +120,42 @@
                 });
         }
 
-        // Candlestick Pattern Functions
-        function isBullishEngulfing(prev, curr) {
-            return curr.open < curr.close && prev.open > prev.close && curr.open < prev.close && curr.close > prev.open;
+        function findSupportResistance(data, range = 5) {
+            let support = [];
+            let resistance = [];
+            for (let i = range; i < data.length - range; i++) {
+                let isSupport = true;
+                let isResistance = true;
+
+                for (let j = 1; j <= range; j++) {
+                    if (data[i].low > data[i - j].low || data[i].low > data[i + j].low) {
+                        isSupport = false;
+                    }
+                    if (data[i].high < data[i - j].high || data[i].high < data[i + j].high) {
+                        isResistance = false;
+                    }
+                }
+                if (isSupport) {
+                    support.push(data[i].low);
+                }
+                if (isResistance) {
+                    resistance.push(data[i].high);
+                }
+            }
+            return { support, resistance };
         }
 
-        function isBearishEngulfing(prev, curr) {
-            return curr.open > curr.close && prev.open < prev.close && curr.open > prev.close && curr.close < prev.open;
+        function enhancedSignalLogic(prev, curr, support, resistance) {
+            if (curr.close > Math.max(...resistance)) {
+                return 'Buy';
+            } else if (curr.close < Math.min(...support)) {
+                return 'Sell';
+            }
+            return '';
         }
 
-        function isHammer(forex) {
-            return (forex.close - forex.open) < (forex.high - forex.low) * 0.3 && (forex.high - forex.low) > 2 * (forex.open - forex.close);
-        }
-
-        function isShootingStar(forex) {
-            return (forex.close - forex.open) < (forex.high - forex.low) * 0.3 && (forex.high - forex.low) > 2 * (forex.close - forex.open);
-        }
-
-        // Fetch data initially and then refresh every second
         fetchForexData();
-        setInterval(fetchForexData, 1000); // Refresh every second
+        setInterval(fetchForexData, 1000);
     </script>
 
 </body>
