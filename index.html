@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gold (XAUUSD) Stock Data</title>
+    <title>Stock Data</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -46,7 +46,7 @@
 </head>
 <body>
 
-    <h1 style="text-align: center;">Gold (XAUUSD) Stock Data</h1>
+    <h1 style="text-align: center;">Stock Data</h1>
     <table id="stockTable">
         <thead>
             <tr>
@@ -64,7 +64,7 @@
 
     <script>
         // Fetch data from Alpha Vantage API for XAUUSD (Gold)
-        const apiUrl = 'https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=XAUUSD&interval=5min&apikey=demo';
+        const apiUrl = 'https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=USDJPY&interval=5min&apikey=9JU17N82L0XRTUFW';
 
         fetch(apiUrl)
             .then(response => response.json())
