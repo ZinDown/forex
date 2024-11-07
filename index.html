@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forex Chart with Buy/Sell Prediction</title>
+    <title>USDJPY Forex Chart with Buy/Sell/Hold Prediction</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -30,25 +30,16 @@
             color: red;
             font-weight: bold;
         }
-        .symbol-selector {
-            margin-bottom: 10px;
+        .hold {
+            color: orange;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
 
-    <h1 style="text-align: center;">Forex Chart with Buy/Sell Prediction</h1>
+    <h1 style="text-align: center;">USDJPY Forex Chart with Buy/Sell/Hold Prediction</h1>
     
-    <!-- Symbol Selector -->
-    <div class="symbol-selector">
-        <label for="symbol">Choose Forex Symbol: </label>
-        <select id="symbol" onchange="fetchData()">
-            <option value="EURUSD">EURUSD</option>
-            <option value="USDJPY">USDJPY</option>
-            <option value="XAUUSD">XAUUSD</option>
-        </select>
-    </div>
-
     <!-- Chart Container -->
     <div class="chart-container">
         <canvas id="forexChart" width="600" height="400"></canvas>
@@ -63,12 +54,11 @@
 
     <script>
         let chart;
-        let symbol = "EURUSD";  // Default symbol
+        let symbol = "USDJPY";  // Fixed symbol for USDJPY
         let interval = "5min";  // Default interval
 
-        // Fetch Forex Data from Alpha Vantage
+        // Fetch Forex Data from Alpha Vantage for USDJPY
         function fetchData() {
-            symbol = document.getElementById("symbol").value;
             const apiUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&apikey=9JU17N82L0XRTUFW`;
 
             fetch(apiUrl)
@@ -76,7 +66,6 @@
                 .then(data => {
                     if (data['Time Series (5min)']) {
                         const timeSeries = data['Time Series (5min)'];
-                        const chartData = [];
                         const timeStamps = [];
                         const openPrices = [];
                         const highPrices = [];
@@ -92,7 +81,7 @@
                         }
 
                         updateChart(timeStamps, openPrices, highPrices, lowPrices, closePrices);
-                        predictPrice(closePrices);
+                        predictPrice(closePrices, openPrices, highPrices, lowPrices);
                     } else {
                         alert("Error fetching data. Please try again later.");
                     }
@@ -137,24 +126,46 @@
             });
         }
 
-        // Simple Buy/Sell Prediction Logic
-        function predictPrice(closePrices) {
+        // Candlestick Pattern Recognition
+        function recognizePattern(open, high, low, close) {
+            if (close > open) {
+                if (high - close < 0.25 * (high - low) && close - low > 0.75 * (high - low)) {
+                    return 'Hammer'; // Bullish Reversal
+                }
+            }
+            if (open > close) {
+                if (close - low < 0.25 * (high - low) && high - open > 0.75 * (high - low)) {
+                    return 'Shooting Star'; // Bearish Reversal
+                }
+            }
+            if (Math.abs(open - close) < 0.1 * (high - low)) {
+                return 'Doji'; // Indecision
+            }
+            return ''; // No pattern
+        }
+
+        // Simple Buy/Sell/Hold Prediction Logic
+        function predictPrice(closePrices, openPrices, highPrices, lowPrices) {
             const recentPrices = closePrices.slice(-3);  // Last 3 close prices for prediction
-            const lastClose = recentPrices[2];
-            const secondLastClose = recentPrices[1];
-            const thirdLastClose = recentPrices[0];
+            const recentOpens = openPrices.slice(-3);
+            const recentHighs = highPrices.slice(-3);
+            const recentLows = lowPrices.slice(-3);
 
             let prediction = '';
+            const latestPattern = recognizePattern(recentOpens[2], recentHighs[2], recentLows[2], recentPrices[2]);
 
-            if (lastClose > secondLastClose && secondLastClose > thirdLastClose) {
+            if (latestPattern === 'Hammer' || (recentPrices[2] > recentPrices[1] && recentPrices[1] > recentPrices[0])) {
                 prediction = 'Buy';
                 document.getElementById('prediction').innerHTML = `<span class="buy">Prediction: Buy</span>`;
-            } else if (lastClose < secondLastClose && secondLastClose < thirdLastClose) {
+            } else if (latestPattern === 'Shooting Star' || (recentPrices[2] < recentPrices[1] && recentPrices[1] < recentPrices[0])) {
                 prediction = 'Sell';
                 document.getElementById('prediction').innerHTML = `<span class="sell">Prediction: Sell</span>`;
+            } else if (latestPattern === 'Doji') {
+                prediction = 'Hold';
+                document.getElementById('prediction').innerHTML = `<span class="hold">Prediction: Hold (Indecision)</span>`;
             } else {
                 prediction = 'Hold';
-                document.getElementById('prediction').innerHTML = 'Prediction: Hold';
+                document.getElementById('prediction').innerHTML = `<span class="hold">Prediction: Hold</span>`;
             }
         }
 
