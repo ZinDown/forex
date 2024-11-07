@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>USDJPY Stock Data</title>
+    <title>Forex Stock Data</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -42,7 +42,7 @@
 </head>
 <body>
 
-    <h1 style="text-align: center;">USDJPY Stock Data</h1>
+    <h1 style="text-align: center;">Forex Stock Data</h1>
     <table id="stockTable">
         <thead>
             <tr>
@@ -59,7 +59,17 @@
     </table>
 
     <script>
-        const apiUrl = 'https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=USDJPY&interval=5min&apikey=9JU17N82L0XRTUFW';
+        // Function to get query parameters from the URL
+        function getQueryParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
+        }
+
+        // Extract symbol and key from the URL
+        const symbol = getQueryParam('s') || 'USDJPY';  // Default to USDJPY if not specified
+        const apiKey = getQueryParam('key') || 'demo';  // Default to 'demo' API key if not specified
+
+        const apiUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=5min&apikey=${apiKey}`;
 
         function fetchStockData() {
             fetch(apiUrl)
@@ -150,7 +160,7 @@
 
         // Fetch data initially and then refresh every second
         fetchStockData();
-        setInterval(fetchStockData, 1000); // Refresh every second
+        setInterval(fetchStockData, 10000); // Refresh every second
     </script>
 
 </body>
