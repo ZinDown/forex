@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EUR/USD Candlestick Chart (5 Min Interval)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        canvas {
+            width: 100%;
+            height: 400px;
+        }
+        select, button {
+            padding: 10px;
+            margin: 10px;
+            font-size: 16px;
+        }
+        .up {
+            color: #00FF00; /* Green for upward candles */
+        }
+        .down {
+            color: #FF0000; /* Red for downward candles */
+        }
+    </style>
+</head>
+<body>
+
+    <h1 style="text-align: center;">EUR/USD Candlestick Chart (5 Min Interval)</h1>
+    <button onclick="fetchData()">Load Data</button>
+
+    <canvas id="myChart"></canvas>
+
+    <script>
+        // Function to fetch and plot data
+        function fetchData() {
+            const interval = '5min'; // Fixed to 5-minute interval
+            const apiUrl = `https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=EUR&to_symbol=USD&interval=${interval}&apikey=demo`;
+
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data["Time Series FX (5min)"]) {
+                        const timeSeries = data[`Time Series FX (${interval})`];
+                        const timestamps = Object.keys(timeSeries);
+                        const chartData = timestamps.map(timestamp => ({
+                            t: new Date(timestamp),
+                            o: parseFloat(timeSeries[timestamp]["1. open"]),
+                            h: parseFloat(timeSeries[timestamp]["2. high"]),
+                            l: parseFloat(timeSeries[timestamp]["3. low"]),
+                            c: parseFloat(timeSeries[timestamp]["4. close"]),
+                        }));
+
+                        plotChart(chartData);
+                    } else {
+                        alert('Error fetching data.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                    alert('An error occurred while fetching the data.');
+                });
+        }
+
+        // Function to plot the chart
+        function plotChart(chartData) {
+            const ctx = document.getElementById('myChart').getContext('2d');
+
+            const chart = new Chart(ctx, {
+                type: 'candlestick',
+                data: {
+                    datasets: [{
+                        label: 'EUR/USD Candlestick',
+                        data: chartData,
+                        borderColor: '#FF6347', // Red color for the candlestick borders
+                        borderWidth: 1,
+                        upColor: '#00FF00', // Green for upward candles
+                        downColor: '#FF0000', // Red for downward candles
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'minute',
+                            },
+                            title: {
+                                display: true,
+                                text: 'Time'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Price'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Support and Resistance Levels
+            calculateSupportResistance(chartData);
+        }
+
+        // Function to calculate basic Support and Resistance levels
+        function calculateSupportResistance(chartData) {
+            const closePrices = chartData.map(data => data.c);
+            const highestPrice = Math.max(...closePrices);
+            const lowestPrice = Math.min(...closePrices);
+
+            const supportLevel = lowestPrice;
+            const resistanceLevel = highestPrice;
+
+            console.log("Support Level: ", supportLevel);
+            console.log("Resistance Level: ", resistanceLevel);
+
+            // Display Buy/Sell signal based on Support/Resistance
+            const lastClose = closePrices[closePrices.length - 1];
+            let action = '';
+            if (lastClose <= supportLevel) {
+                action = 'Buy (Support Level)';
+            } else if (lastClose >= resistanceLevel) {
+                action = 'Sell (Resistance Level)';
+            } else {
+                action = 'Hold';
+            }
+
+            alert(`Action: ${action}`);
+        }
+
+        // Initial Data Load
+        fetchData();
+
+    </script>
+
+</body>
+</html>
