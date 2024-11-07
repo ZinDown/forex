@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forex Stock Data</title>
+    <title>Forex Data</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -42,7 +42,7 @@
 </head>
 <body>
 
-    <h1 style="text-align: center;">Forex Stock Data</h1>
+    <h1 style="text-align: center;">Forex Data</h1>
     <table id="stockTable">
         <thead>
             <tr>
@@ -65,19 +65,21 @@
             return urlParams.get(param);
         }
 
-        // Extract symbol and key from the URL
-        const symbol = getQueryParam('s') || 'USDJPY';  // Default to USDJPY if not specified
-        const apiKey = getQueryParam('key') || 'demo';  // Default to 'demo' API key if not specified
+        // Extract 'from' symbol (f) and 'to' symbol (t) from the URL
+        const fromSymbol = getQueryParam('f') || 'EUR';  // Default to EUR if not specified
+        const toSymbol = getQueryParam('t') || 'USD';  // Default to USD if not specified
+        const apiKey = 'demo';  // You can replace this with a dynamic key or your own key
 
-        const apiUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=5min&apikey=${apiKey}`;
+        // Construct the API URL using the from_symbol and to_symbol
+        const apiUrl = `https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=${fromSymbol}&to_symbol=${toSymbol}&interval=5min&apikey=${apiKey}`;
 
-        function fetchStockData() {
+        function fetchForexData() {
             fetch(apiUrl)
                 .then(response => response.json())
                 .then(data => {
-                    if (data['Time Series (5min)']) {
-                        const timeSeries = data['Time Series (5min)'];
-                        const stockData = Object.keys(timeSeries).map(timestamp => {
+                    if (data['Time Series FX (5min)']) {
+                        const timeSeries = data['Time Series FX (5min)'];
+                        const forexData = Object.keys(timeSeries).map(timestamp => {
                             return {
                                 timestamp,
                                 open: parseFloat(timeSeries[timestamp]['1. open']),
@@ -91,7 +93,7 @@
                         const tableBody = document.getElementById('stockData');
                         tableBody.innerHTML = ''; // Clear previous data
 
-                        stockData.forEach((stock, index) => {
+                        forexData.forEach((forex, index) => {
                             let action = '';
                             let openArrow = '';
                             let highArrow = '';
@@ -99,34 +101,34 @@
                             let closeArrow = '';
 
                             if (index > 0) {
-                                const prevStock = stockData[index - 1];
-                                
+                                const prevForex = forexData[index - 1];
+
                                 // Candlestick Pattern Recognition
-                                if (isBullishEngulfing(prevStock, stock)) {
+                                if (isBullishEngulfing(prevForex, forex)) {
                                     action = 'Buy';
-                                } else if (isBearishEngulfing(prevStock, stock)) {
+                                } else if (isBearishEngulfing(prevForex, forex)) {
                                     action = 'Sell';
-                                } else if (isHammer(stock)) {
+                                } else if (isHammer(forex)) {
                                     action = 'Buy';
-                                } else if (isShootingStar(stock)) {
+                                } else if (isShootingStar(forex)) {
                                     action = 'Sell';
                                 }
 
                                 // Determine Arrows
-                                openArrow = stock.open > prevStock.open ? '↑' : '↓';
-                                highArrow = stock.high > prevStock.high ? '↑' : '↓';
-                                lowArrow = stock.low > prevStock.low ? '↑' : '↓';
-                                closeArrow = stock.close > prevStock.close ? '↑' : '↓';
+                                openArrow = forex.open > prevForex.open ? '↑' : '↓';
+                                highArrow = forex.high > prevForex.high ? '↑' : '↓';
+                                lowArrow = forex.low > prevForex.low ? '↑' : '↓';
+                                closeArrow = forex.close > prevForex.close ? '↑' : '↓';
                             }
 
                             const row = document.createElement('tr');
                             row.innerHTML = `
-                                <td>${stock.timestamp}</td>
-                                <td class="${openArrow === '↑' ? 'up' : 'down'}">${stock.open} ${openArrow}</td>
-                                <td class="${highArrow === '↑' ? 'up' : 'down'}">${stock.high} ${highArrow}</td>
-                                <td class="${lowArrow === '↑' ? 'up' : 'down'}">${stock.low} ${lowArrow}</td>
-                                <td class="${closeArrow === '↑' ? 'up' : 'down'}">${stock.close} ${closeArrow}</td>
-                                <td>${stock.volume}</td>
+                                <td>${forex.timestamp}</td>
+                                <td class="${openArrow === '↑' ? 'up' : 'down'}">${forex.open} ${openArrow}</td>
+                                <td class="${highArrow === '↑' ? 'up' : 'down'}">${forex.high} ${highArrow}</td>
+                                <td class="${lowArrow === '↑' ? 'up' : 'down'}">${forex.low} ${lowArrow}</td>
+                                <td class="${closeArrow === '↑' ? 'up' : 'down'}">${forex.close} ${closeArrow}</td>
+                                <td>${forex.volume}</td>
                                 <td class="${action === 'Buy' ? 'buy' : 'sell'}">${action}</td>
                             `;
                             tableBody.appendChild(row);
@@ -150,17 +152,17 @@
             return curr.open > curr.close && prev.open < prev.close && curr.open > prev.close && curr.close < prev.open;
         }
 
-        function isHammer(stock) {
-            return (stock.close - stock.open) < (stock.high - stock.low) * 0.3 && (stock.high - stock.low) > 2 * (stock.open - stock.close);
+        function isHammer(forex) {
+            return (forex.close - forex.open) < (forex.high - forex.low) * 0.3 && (forex.high - forex.low) > 2 * (forex.open - forex.close);
         }
 
-        function isShootingStar(stock) {
-            return (stock.close - stock.open) < (stock.high - stock.low) * 0.3 && (stock.high - stock.low) > 2 * (stock.close - stock.open);
+        function isShootingStar(forex) {
+            return (forex.close - forex.open) < (forex.high - forex.low) * 0.3 && (forex.high - forex.low) > 2 * (forex.close - forex.open);
         }
 
         // Fetch data initially and then refresh every second
-        fetchStockData();
-        setInterval(fetchStockData, 10000); // Refresh every second
+        fetchForexData();
+        setInterval(fetchForexData, 1000); // Refresh every second
     </script>
 
 </body>
