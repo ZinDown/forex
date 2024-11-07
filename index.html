@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gold (XAUUSD) Stock Data</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #4CAF50; /* Green background for the table */
+            color: white;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #3e8e41; /* Darker green for header */
+        }
+        .up {
+            color: #00FF00; /* Green for upward arrow */
+        }
+        .down {
+            color: #FF0000; /* Red for downward arrow */
+        }
+        .buy {
+            font-weight: bold;
+            color: #00FF00; /* Green for Buy */
+        }
+        .sell {
+            font-weight: bold;
+            color: #FF0000; /* Red for Sell */
+        }
+        .hold {
+            font-weight: normal;
+            color: #FFFF00; /* Yellow for Hold */
+        }
+    </style>
+</head>
+<body>
+
+    <h1 style="text-align: center;">Gold (XAUUSD) Stock Data</h1>
+    <table id="stockTable">
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Open</th>
+                <th>High</th>
+                <th>Low</th>
+                <th>Close</th>
+                <th>Volume</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="stockData"></tbody>
+    </table>
+
+    <script>
+        // Fetch data from Alpha Vantage API for XAUUSD (Gold)
+        const apiUrl = 'https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=XAUUSD&interval=5min&apikey=demo';
+
+        fetch(apiUrl)
+            .then(response => response.json())
+            .then(data => {
+                const timeSeries = data['Time Series (5min)'];
+                const stockData = Object.keys(timeSeries).map(timestamp => {
+                    return {
+                        timestamp,
+                        open: timeSeries[timestamp]['1. open'],
+                        high: timeSeries[timestamp]['2. high'],
+                        low: timeSeries[timestamp]['3. low'],
+                        close: timeSeries[timestamp]['4. close'],
+                        volume: timeSeries[timestamp]['5. volume'],
+                    };
+                });
+
+                const tableBody = document.getElementById('stockData');
+                stockData.forEach((stock, index) => {
+                    let action = '';
+                    let openArrow = '';
+                    let highArrow = '';
+                    let lowArrow = '';
+                    let closeArrow = '';
+
+                    // Buy or Sell Decision (Simple strategy)
+                    if (index > 0) {
+                        const prevClose = parseFloat(stockData[index - 1].close);
+                        const currClose = parseFloat(stock.close);
+
+                        if (currClose > prevClose) {
+                            action = 'Buy'; // If current close > previous close, buy
+                        } else if (currClose < prevClose) {
+                            action = 'Sell'; // If current close < previous close, sell
+                        } else {
+                            action = 'Hold'; // No change in price, hold
+                        }
+                    }
+
+                    // Check if the current value is higher or lower than the previous value to show arrows
+                    if (index > 0) {
+                        const prevStock = stockData[index - 1];
+
+                        // Open, High, Low, Close comparison for arrows
+                        openArrow = parseFloat(stock.open) > parseFloat(prevStock.open) ? '↑' : '↓';
+                        highArrow = parseFloat(stock.high) > parseFloat(prevStock.high) ? '↑' : '↓';
+                        lowArrow = parseFloat(stock.low) > parseFloat(prevStock.low) ? '↑' : '↓';
+                        closeArrow = parseFloat(stock.close) > parseFloat(prevStock.close) ? '↑' : '↓';
+                    }
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${stock.timestamp}</td>
+                        <td class="${openArrow === '↑' ? 'up' : 'down'}">${stock.open} ${openArrow}</td>
+                        <td class="${highArrow === '↑' ? 'up' : 'down'}">${stock.high} ${highArrow}</td>
+                        <td class="${lowArrow === '↑' ? 'up' : 'down'}">${stock.low} ${lowArrow}</td>
+                        <td class="${closeArrow === '↑' ? 'up' : 'down'}">${stock.close} ${closeArrow}</td>
+                        <td>${stock.volume}</td>
+                        <td class="${action === 'Buy' ? 'buy' : action === 'Sell' ? 'sell' : 'hold'}">${action}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            })
+            .catch(error => console.error('Error fetching data:', error));
+    </script>
+
+</body>
+</html>
