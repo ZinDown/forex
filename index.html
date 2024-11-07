@@ -3,131 +3,166 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock Data</title>
+    <title>Forex Chart with Buy/Sell Prediction</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             background-color: #f4f4f4;
             padding: 20px;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background-color: #4CAF50; /* Green background for the table */
-            color: white;
+        canvas {
+            display: block;
+            margin: 0 auto;
         }
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border: 1px solid #ddd;
+        .chart-container {
+            width: 80%;
+            margin: 0 auto;
         }
-        th {
-            background-color: #3e8e41; /* Darker green for header */
-        }
-        .up {
-            color: #00FF00; /* Green for upward arrow */
-        }
-        .down {
-            color: #FF0000; /* Red for downward arrow */
+        .button-container {
+            text-align: center;
+            margin-top: 20px;
         }
         .buy {
+            color: green;
             font-weight: bold;
-            color: #00FF00; /* Green for Buy */
         }
         .sell {
+            color: red;
             font-weight: bold;
-            color: #FF0000; /* Red for Sell */
         }
-        .hold {
-            font-weight: normal;
-            color: #FFFF00; /* Yellow for Hold */
+        .symbol-selector {
+            margin-bottom: 10px;
         }
     </style>
 </head>
 <body>
 
-    <h1 style="text-align: center;">Stock Data</h1>
-    <table id="stockTable">
-        <thead>
-            <tr>
-                <th>Timestamp</th>
-                <th>Open</th>
-                <th>High</th>
-                <th>Low</th>
-                <th>Close</th>
-                <th>Volume</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody id="stockData"></tbody>
-    </table>
+    <h1 style="text-align: center;">Forex Chart with Buy/Sell Prediction</h1>
+    
+    <!-- Symbol Selector -->
+    <div class="symbol-selector">
+        <label for="symbol">Choose Forex Symbol: </label>
+        <select id="symbol" onchange="fetchData()">
+            <option value="EURUSD">EURUSD</option>
+            <option value="USDJPY">USDJPY</option>
+            <option value="XAUUSD">XAUUSD</option>
+        </select>
+    </div>
+
+    <!-- Chart Container -->
+    <div class="chart-container">
+        <canvas id="forexChart" width="600" height="400"></canvas>
+    </div>
+
+    <!-- Action Section -->
+    <div class="button-container">
+        <p id="prediction"></p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
-        // Fetch data from Alpha Vantage API for XAUUSD (Gold)
-        const apiUrl = 'https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=USDJPY&interval=5min&apikey=9JU17N82L0XRTUFW';
+        let chart;
+        let symbol = "EURUSD";  // Default symbol
+        let interval = "5min";  // Default interval
 
-        fetch(apiUrl)
-            .then(response => response.json())
-            .then(data => {
-                const timeSeries = data['Time Series (5min)'];
-                const stockData = Object.keys(timeSeries).map(timestamp => {
-                    return {
-                        timestamp,
-                        open: timeSeries[timestamp]['1. open'],
-                        high: timeSeries[timestamp]['2. high'],
-                        low: timeSeries[timestamp]['3. low'],
-                        close: timeSeries[timestamp]['4. close'],
-                        volume: timeSeries[timestamp]['5. volume'],
-                    };
-                });
+        // Fetch Forex Data from Alpha Vantage
+        function fetchData() {
+            symbol = document.getElementById("symbol").value;
+            const apiUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&apikey=9JU17N82L0XRTUFW`;
 
-                const tableBody = document.getElementById('stockData');
-                stockData.forEach((stock, index) => {
-                    let action = '';
-                    let openArrow = '';
-                    let highArrow = '';
-                    let lowArrow = '';
-                    let closeArrow = '';
-
-                    // Buy or Sell Decision (Simple strategy)
-                    if (index > 0) {
-                        const prevClose = parseFloat(stockData[index - 1].close);
-                        const currClose = parseFloat(stock.close);
-
-                        if (currClose > prevClose) {
-                            action = 'Buy'; // If current close > previous close, buy
-                        } else if (currClose < prevClose) {
-                            action = 'Sell'; // If current close < previous close, sell
-                        } else {
-                            action = 'Hold'; // No change in price, hold
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data['Time Series (5min)']) {
+                        const timeSeries = data['Time Series (5min)'];
+                        const chartData = [];
+                        const timeStamps = [];
+                        const openPrices = [];
+                        const highPrices = [];
+                        const lowPrices = [];
+                        const closePrices = [];
+                        
+                        for (let time in timeSeries) {
+                            timeStamps.push(time);
+                            openPrices.push(parseFloat(timeSeries[time]['1. open']));
+                            highPrices.push(parseFloat(timeSeries[time]['2. high']));
+                            lowPrices.push(parseFloat(timeSeries[time]['3. low']));
+                            closePrices.push(parseFloat(timeSeries[time]['4. close']));
                         }
+
+                        updateChart(timeStamps, openPrices, highPrices, lowPrices, closePrices);
+                        predictPrice(closePrices);
+                    } else {
+                        alert("Error fetching data. Please try again later.");
                     }
-
-                    // Check if the current value is higher or lower than the previous value to show arrows
-                    if (index > 0) {
-                        const prevStock = stockData[index - 1];
-
-                        // Open, High, Low, Close comparison for arrows
-                        openArrow = parseFloat(stock.open) > parseFloat(prevStock.open) ? '↑' : '↓';
-                        highArrow = parseFloat(stock.high) > parseFloat(prevStock.high) ? '↑' : '↓';
-                        lowArrow = parseFloat(stock.low) > parseFloat(prevStock.low) ? '↑' : '↓';
-                        closeArrow = parseFloat(stock.close) > parseFloat(prevStock.close) ? '↑' : '↓';
-                    }
-
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${stock.timestamp}</td>
-                        <td class="${openArrow === '↑' ? 'up' : 'down'}">${stock.open} ${openArrow}</td>
-                        <td class="${highArrow === '↑' ? 'up' : 'down'}">${stock.high} ${highArrow}</td>
-                        <td class="${lowArrow === '↑' ? 'up' : 'down'}">${stock.low} ${lowArrow}</td>
-                        <td class="${closeArrow === '↑' ? 'up' : 'down'}">${stock.close} ${closeArrow}</td>
-                        <td>${stock.volume}</td>
-                        <td class="${action === 'Buy' ? 'buy' : action === 'Sell' ? 'sell' : 'hold'}">${action}</td>
-                    `;
-                    tableBody.appendChild(row);
+                })
+                .catch(error => {
+                    console.error("Error fetching data: ", error);
+                    alert("Error fetching data.");
                 });
-            })
-            .catch(error => console.error('Error fetching data:', error));
+        }
+
+        // Update Candlestick Chart
+        function updateChart(timeStamps, openPrices, highPrices, lowPrices, closePrices) {
+            const ctx = document.getElementById("forexChart").getContext("2d");
+
+            if (chart) chart.destroy();
+
+            chart = new Chart(ctx, {
+                type: 'candlestick',
+                data: {
+                    labels: timeStamps,
+                    datasets: [{
+                        label: `${symbol} Price Data`,
+                        data: timeStamps.map((timestamp, index) => ({
+                            x: timestamp,
+                            o: openPrices[index],
+                            h: highPrices[index],
+                            l: lowPrices[index],
+                            c: closePrices[index]
+                        })),
+                        borderColor: '#4CAF50',  // Green for candles
+                        borderWidth: 1,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: { type: 'category' },
+                        y: { beginAtZero: false }
+                    }
+                }
+            });
+        }
+
+        // Simple Buy/Sell Prediction Logic
+        function predictPrice(closePrices) {
+            const recentPrices = closePrices.slice(-3);  // Last 3 close prices for prediction
+            const lastClose = recentPrices[2];
+            const secondLastClose = recentPrices[1];
+            const thirdLastClose = recentPrices[0];
+
+            let prediction = '';
+
+            if (lastClose > secondLastClose && secondLastClose > thirdLastClose) {
+                prediction = 'Buy';
+                document.getElementById('prediction').innerHTML = `<span class="buy">Prediction: Buy</span>`;
+            } else if (lastClose < secondLastClose && secondLastClose < thirdLastClose) {
+                prediction = 'Sell';
+                document.getElementById('prediction').innerHTML = `<span class="sell">Prediction: Sell</span>`;
+            } else {
+                prediction = 'Hold';
+                document.getElementById('prediction').innerHTML = 'Prediction: Hold';
+            }
+        }
+
+        // Fetch data every second
+        setInterval(fetchData, 1000);
+
+        // Initial Data Fetch
+        fetchData();
     </script>
 
 </body>
