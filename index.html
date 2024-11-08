@@ -1,162 +1,31 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="my">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forex Data with Support and Resistance</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            padding: 20px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background-color: #4CAF50;
-            color: white;
-        }
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border: 1px solid #ddd;
-        }
-        th {
-            background-color: #3e8e41;
-        }
-        .up {
-            color: #00FF00;
-        }
-        .down {
-            color: #FF0000;
-        }
-        .buy {
-            font-weight: bold;
-            color: #00FF00;
-        }
-        .sell {
-            font-weight: bold;
-            color: #FF0000;
-        }
-    </style>
+    <title>TradingView Chart ဖုန်းအတွက်</title>
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
 </head>
 <body>
-
-    <h1 style="text-align: center;">Forex Data with Support and Resistance</h1>
-    <table id="stockTable">
-        <thead>
-            <tr>
-                <th>Timestamp</th>
-                <th>Open</th>
-                <th>High</th>
-                <th>Low</th>
-                <th>Close</th>
-                <th>Volume</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody id="stockData"></tbody>
-    </table>
-
-    <script>
-        function getQueryParam(param) {
-            const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get(param);
-        }
-
-        const fromSymbol = getQueryParam('f') || 'EUR';
-        const toSymbol = getQueryParam('t') || 'USD';
-        const apiKey = 'demo';
-        const apiUrl = `https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=${fromSymbol}&to_symbol=${toSymbol}&interval=5min&apikey=${apiKey}`;
-
-        function fetchForexData() {
-            fetch(apiUrl)
-                .then(response => response.json())
-                .then(data => {
-                    if (data['Time Series FX (5min)']) {
-                        const timeSeries = data['Time Series FX (5min)'];
-                        const forexData = Object.keys(timeSeries).map(timestamp => {
-                            return {
-                                timestamp,
-                                open: parseFloat(timeSeries[timestamp]['1. open']),
-                                high: parseFloat(timeSeries[timestamp]['2. high']),
-                                low: parseFloat(timeSeries[timestamp]['3. low']),
-                                close: parseFloat(timeSeries[timestamp]['4. close']),
-                                volume: timeSeries[timestamp]['5. volume'],
-                            };
-                        });
-
-                        const tableBody = document.getElementById('stockData');
-                        tableBody.innerHTML = '';
-
-                        forexData.forEach((forex, index) => {
-                            let action = '';
-                            if (index > 0) {
-                                const prevForex = forexData[index - 1];
-                                const { support, resistance } = findSupportResistance(forexData.slice(0, index));
-
-                                action = enhancedSignalLogic(prevForex, forex, support, resistance);
-                            }
-
-                            const row = document.createElement('tr');
-                            row.innerHTML = `
-                                <td>${forex.timestamp}</td>
-                                <td class="${forex.open > prevForex.open ? 'up' : 'down'}">${forex.open}</td>
-                                <td class="${forex.high > prevForex.high ? 'up' : 'down'}">${forex.high}</td>
-                                <td class="${forex.low > prevForex.low ? 'up' : 'down'}">${forex.low}</td>
-                                <td class="${forex.close > prevForex.close ? 'up' : 'down'}">${forex.close}</td>
-                                <td>${forex.volume}</td>
-                                <td class="${action === 'Buy' ? 'buy' : 'sell'}">${action}</td>
-                            `;
-                            tableBody.appendChild(row);
-                        });
-                    } else {
-                        alert('Error fetching data. Please check the API key or the request limit.');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching data:', error);
-                    alert('An error occurred while fetching the data.');
-                });
-        }
-
-        function findSupportResistance(data, range = 5) {
-            let support = [];
-            let resistance = [];
-            for (let i = range; i < data.length - range; i++) {
-                let isSupport = true;
-                let isResistance = true;
-
-                for (let j = 1; j <= range; j++) {
-                    if (data[i].low > data[i - j].low || data[i].low > data[i + j].low) {
-                        isSupport = false;
-                    }
-                    if (data[i].high < data[i - j].high || data[i].high < data[i + j].high) {
-                        isResistance = false;
-                    }
-                }
-                if (isSupport) {
-                    support.push(data[i].low);
-                }
-                if (isResistance) {
-                    resistance.push(data[i].high);
-                }
-            }
-            return { support, resistance };
-        }
-
-        function enhancedSignalLogic(prev, curr, support, resistance) {
-            if (curr.close > Math.max(...resistance)) {
-                return 'Buy';
-            } else if (curr.close < Math.min(...support)) {
-                return 'Sell';
-            }
-            return '';
-        }
-
-        fetchForexData();
-        setInterval(fetchForexData, 1000);
-    </script>
-
+    <div class="tradingview-widget-container" style="max-width: 100%; height: 80vh;">
+        <div id="tradingview_custom"></div>
+        <script type="text/javascript">
+            new TradingView.widget({
+                "width": "100%",
+                "height": "80vh",
+                "symbol": "FX:XAUUSD", // သင့်ရဲ့ TradingView Symbol ကို ပြင်ပါ
+                "interval": "D",
+                "timezone": "Etc/UTC",
+                "theme": "light",
+                "style": "1",
+                "locale": "my",
+                "toolbar_bg": "#f1f3f6",
+                "enable_publishing": false,
+                "hide_top_toolbar": true,
+                "save_image": false,
+                "container_id": "tradingview_custom"
+            });
+        </script>
+    </div>
 </body>
 </html>
